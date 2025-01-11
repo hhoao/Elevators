@@ -6,11 +6,11 @@ import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
+import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
+import net.minecraft.command.CommandSource;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.config.ModConfig;
@@ -36,28 +36,28 @@ public class Config {
         return MAX_TELEPORT_HEIGHT.get();
     }
 
-    public static int setAllowElevatingThroughBlocks(CommandContext<CommandSourceStack> context) {
+    public static int setAllowElevatingThroughBlocks(CommandContext<CommandSource> context) {
         boolean value = BoolArgumentType.getBool(context, "value");
         ALLOW_ELEVATING_THROUGH_BLOCKS.set(value);
-        context.getSource().sendSuccess(new TextComponent("Set allowElevatingThroughBlocks to " + value), true);
+        context.getSource().sendFeedback(new StringTextComponent("Set allowElevatingThroughBlocks to " + value), true);
         return Command.SINGLE_SUCCESS;
     }
 
-    public static int setMaxTeleportHeight(CommandContext<CommandSourceStack> context) {
+    public static int setMaxTeleportHeight(CommandContext<CommandSource> context) {
         int value = IntegerArgumentType.getInteger(context, "value");
         MAX_TELEPORT_HEIGHT.set(value);
-        context.getSource().sendSuccess(new TextComponent("Set maxTeleportHeight to " + value), true);
+        context.getSource().sendFeedback(new StringTextComponent("Set maxTeleportHeight to " + value), true);
         return Command.SINGLE_SUCCESS;
     }
 
-    public static int setElevatorBlock(CommandContext<CommandSourceStack> context) {
+    public static int setElevatorBlock(CommandContext<CommandSource> context) {
         String blockName = StringArgumentType.getString(context, "value");
         if (ForgeRegistries.BLOCKS.containsKey(new ResourceLocation(blockName))) {
             ELEVATOR_BLOCK.set(blockName);
-            context.getSource().sendSuccess(new TextComponent("Set elevatorBlock to " + blockName), true);
+            context.getSource().sendFeedback(new StringTextComponent("Set elevatorBlock to " + blockName), true);
             return Command.SINGLE_SUCCESS;
         } else {
-            context.getSource().sendFailure(new TextComponent("Block not found: " + blockName));
+            context.getSource().sendFeedback(new StringTextComponent("Block not found: " + blockName), true);
             return 0;
         }
     }
