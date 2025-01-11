@@ -24,6 +24,8 @@
 
 package org.hhoao.mc.ironelevators;
 
+
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -77,10 +79,10 @@ public class ElevatorController {
 	}
 
 	public boolean tryTeleportUp(ServerPlayer player) {
-		if (!isElevator(player.level(), player.getOnPos())) {
+		if (!isElevator(player.level, player.getOnPos())) {
 			return false;
 		}
-		Optional<BlockPos> upTarget = nextUpElevator(player.level(), player.getOnPos());
+		Optional<BlockPos> upTarget = nextUpElevator(player.level, player.getOnPos());
 		if (upTarget.isEmpty()) {
 			return false;
 		}
@@ -91,10 +93,10 @@ public class ElevatorController {
 	}
 
 	public boolean tryTeleportDown(ServerPlayer player) {
-		if (!isElevator(player.level(), player.getOnPos())) {
+		if (!isElevator(player.level, player.getOnPos())) {
 			return false;
 		}
-		Optional<BlockPos> downTarget = nextDownElevator(player.level(), player.getOnPos());
+		Optional<BlockPos> downTarget = nextDownElevator(player.level, player.getOnPos());
 		if (downTarget.isEmpty()) {
 			return false;
 		}

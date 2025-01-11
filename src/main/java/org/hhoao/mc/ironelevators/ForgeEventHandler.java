@@ -183,7 +183,7 @@ public class ForgeEventHandler {
 //    }
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide) { // 仅在服务端处理
+        if (event.phase == TickEvent.Phase.END && !event.player.level.isClientSide) { // 仅在服务端处理
             Player player = event.player;
             if (player.isCrouching()) {
                 ElevatorController elevatorController =
