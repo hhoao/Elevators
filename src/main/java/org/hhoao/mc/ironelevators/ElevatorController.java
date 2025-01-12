@@ -26,17 +26,18 @@ package org.hhoao.mc.ironelevators;
 
 
 
+import net.minecraft.block.Block;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.DimensionType;
 import net.minecraft.world.World;
 
+import java.util.Map;
 import java.util.Optional;
 
 
 public class ElevatorController {
-	private boolean isElevator(World world, BlockPos targetPos) {
-		return world.getBlockState(targetPos).getBlock() == Config.getElevatorBlock();
+	public boolean isElevator(World world, BlockPos targetPos) {
+		return Config.getElevatorBlockMaxHeightMap().containsKey(world.getBlockState(targetPos).getBlock());
 	}
 
 	private boolean isAir(World world, BlockPos targetPos) {
@@ -47,11 +48,11 @@ public class ElevatorController {
 		return world.getBlockState(targetPos.up()).isAir() && world.getBlockState(targetPos.up().up()).isAir();
 	}
 
-	private Optional<BlockPos> nextUpElevator(World world, BlockPos pos) {
+	private Optional<BlockPos> nextUpElevator(World world, BlockPos pos, int maxTeleportHeight) {
 		BlockPos upPos = pos;
-		for (int i = 0; i < Config.getMaxTeleportHeight(); i++) {
+		for (int i = 0; i < maxTeleportHeight; i++) {
 			upPos = upPos.up();
-			if (upPos.getY() > world.getDimensionType().getLogicalHeight()) {
+			if (upPos.getY() > world.getHeight()) {
 				return Optional.empty();
 			}
 			if (isElevator(world, upPos) && isSpaceFree(world, upPos)) {
@@ -63,9 +64,9 @@ public class ElevatorController {
 		return Optional.empty();
 	}
 
-	private Optional<BlockPos> nextDownElevator(World world, BlockPos pos) {
+	private Optional<BlockPos> nextDownElevator(World world, BlockPos pos, int maxTeleportHeight) {
 		BlockPos downPos = pos;
-		for (int i = 0; i < Config.getMaxTeleportHeight(); i++) {
+		for (int i = 0; i < maxTeleportHeight; i++) {
 			downPos = downPos.down();
 			if (downPos.getY() < 0) {
 				return Optional.empty();
@@ -79,30 +80,28 @@ public class ElevatorController {
 		return Optional.empty();
 	}
 
-	public boolean tryTeleportUp(ServerPlayerEntity player) {
+	public boolean tryTeleport(ServerPlayerEntity player, boolean up) {
 		if (!isElevator(player.world, player.getPosition().down())) {
 			return false;
 		}
-		Optional<BlockPos> upTarget = nextUpElevator(player.world, player.getPosition().down());
-		if (!upTarget.isPresent()) {
+		int maxTeleportHeight = getMaxTeleportHeight(player.world.getBlockState(player.getPosition().down()).getBlock());
+		Optional<BlockPos> target = up ?
+			nextUpElevator(player.world, player.getPosition().down(), maxTeleportHeight) :
+			nextDownElevator(player.world, player.getPosition().down(), maxTeleportHeight);
+		if (!target.isPresent()) {
 			return false;
 		}
-		BlockPos blockPos = upTarget.get();
-		player.teleportKeepLoaded(player.getPosX(), blockPos.getY()+1, player.getPosZ());
-		player.setJumping(false);
+		player.teleportKeepLoaded(player.getPosX(), target.get().getY()+1, player.getPosZ());
 		return true;
 	}
 
-	public boolean tryTeleportDown(ServerPlayerEntity player) {
-		if (!isElevator(player.world, player.getPosition().down())) {
-			return false;
+	private int getMaxTeleportHeight(Block block) {
+		Map<Block, Integer> elevatorBlocks = Config.getElevatorBlockMaxHeightMap();
+		Integer i = elevatorBlocks.get(block);
+		if (i != -1) {
+			return i;
+		} else {
+			return Config.getDefaultMaxTeleportHeight();
 		}
-		Optional<BlockPos> downTarget = nextDownElevator(player.world, player.getPosition().down());
-		if (!downTarget.isPresent()) {
-			return false;
-		}
-		BlockPos blockPos = downTarget.get();
-		player.teleportKeepLoaded(player.getPosX(), blockPos.getY()+1, player.getPosZ());
-		return true;
 	}
 }
