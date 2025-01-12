@@ -36,7 +36,7 @@ import java.util.Optional;
 
 
 public class ElevatorController {
-	private boolean isElevator(Level world, BlockPos targetPos) {
+	public boolean isElevator(Level world, BlockPos targetPos) {
 		return Config.getElevatorBlockMaxHeightMap().containsKey(world.getBlockState(targetPos).getBlock());
 	}
 
@@ -101,7 +101,7 @@ public class ElevatorController {
 		if (i != -1) {
 			return i;
 		} else {
-			return Config.getMaxTeleportHeight();
+			return Config.getDefaultMaxTeleportHeight();
 		}
 	}
 }

@@ -27,7 +27,7 @@ public class Config {
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
     private static final ForgeConfigSpec.ConfigValue<Boolean> ALLOW_ELEVATING_THROUGH_BLOCKS =
         BUILDER.define("allowElevatingThroughBlocks", true);
-    private static final ForgeConfigSpec.ConfigValue<Integer> MAX_TELEPORT_HEIGHT =
+    private static final ForgeConfigSpec.ConfigValue<Integer> DEFAULT_MAX_TELEPORT_HEIGHT =
         BUILDER.define("defaultMaxTeleportHeight", 8);
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> ELEVATOR_BLOCKS_WITH_HEIGHT =
         BUILDER.defineList("elevatorBlocksWithHeight", getDefaultElevatorsBlock(), (o) -> true);
@@ -39,10 +39,11 @@ public class Config {
             blockMaxHeightMap = new HashMap<>();
             for (String blockHeight : ELEVATOR_BLOCKS_WITH_HEIGHT.get()) {
                 String[] split = blockHeight.split(":");
-                if (split.length > 1) {
-                    blockMaxHeightMap.put(ForgeRegistries.BLOCKS.getValue(new ResourceLocation(split[0])), Integer.valueOf(split[1]));
+                if (split.length > 2) {
+                    String substring = blockHeight.substring(0, blockHeight.lastIndexOf(':'));
+                    blockMaxHeightMap.put(ForgeRegistries.BLOCKS.getValue(new ResourceLocation(substring)), Integer.valueOf(split[2]));
                 } else {
-                    blockMaxHeightMap.put(ForgeRegistries.BLOCKS.getValue(new ResourceLocation(split[0])), -1);
+                    blockMaxHeightMap.put(ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockHeight)), -1);
                 }
             }
         }
@@ -53,8 +54,8 @@ public class Config {
         return ALLOW_ELEVATING_THROUGH_BLOCKS.get();
     }
 
-    public static Integer getMaxTeleportHeight() {
-        return MAX_TELEPORT_HEIGHT.get();
+    public static Integer getDefaultMaxTeleportHeight() {
+        return DEFAULT_MAX_TELEPORT_HEIGHT.get();
     }
 
     private static List<String> getDefaultElevatorsBlock() {
@@ -73,7 +74,7 @@ public class Config {
 
     public static int setMaxTeleportHeight(CommandContext<CommandSourceStack> context) {
         int value = IntegerArgumentType.getInteger(context, "value");
-        MAX_TELEPORT_HEIGHT.set(value);
+        DEFAULT_MAX_TELEPORT_HEIGHT.set(value);
         context.getSource().sendSuccess(new TextComponent("Set maxTeleportHeight to " + value), true);
         return Command.SINGLE_SUCCESS;
     }
@@ -85,7 +86,7 @@ public class Config {
         elevatorBlockMaxHeightMap.put(block, height);
         refreshConfig(elevatorBlockMaxHeightMap);
         context.getSource().sendSuccess(new TextComponent(
-            String.format("Add elevatorBlock: %s, height: %s", block.getDescriptionId(), height == -1 ? getMaxTeleportHeight() : height)),
+            String.format("Add elevatorBlock: %s, height: %s", block.getDescriptionId(), height == -1 ? getDefaultMaxTeleportHeight() : height)),
             true);
         return Command.SINGLE_SUCCESS;
     }
@@ -129,7 +130,7 @@ public class Config {
                     elevatorBlockMaxHeightMap.entrySet().stream()
                         .map(block ->
                             ForgeRegistries.BLOCKS.getKey(block.getKey()).toString()+
-                                (block.getValue() == -1 ? "" : ":" + block.getValue()))
+                                (block.getValue() == -1 ? getDefaultMaxTeleportHeight() : ":" + block.getValue()))
                         .toArray(String[]::new)))), false);
         return Command.SINGLE_SUCCESS;
     }

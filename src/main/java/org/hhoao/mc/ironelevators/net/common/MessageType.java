@@ -152,73 +152,22 @@
  * This Source Code Form is “Incompatible With Secondary Licenses”, as defined by the Mozilla Public License, v. 2.0.
  */
 
-package org.hhoao.mc.ironelevators;
+package org.hhoao.mc.ironelevators.net.common;
 
-import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.BoolArgumentType;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
-
-import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.blocks.BlockStateArgument;
-import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.eventbus.api.Event;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import org.hhoao.mc.ironelevators.net.ElevatorTeleportMessage;
-import org.lwjgl.glfw.GLFW;
-
-public class ForgeEventHandler {
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public void onPlayerEntityKeyPress(InputEvent.KeyInputEvent event) {
-        Minecraft instance = Minecraft.getInstance();
-        KeyMapping keyBindJump = instance.options.keyJump;
-        KeyMapping keyBindSneak = instance.options.keyShift;
-        if (event.getAction() == GLFW.GLFW_PRESS) {
-            LocalPlayer player = instance.player;
-            if (player == null || !Elevators.getElevatorController().isElevator(player.level, player.getOnPos())) {
-                return;
-            }
-            if (keyBindSneak.getKey().getValue() == event.getKey()) {
-                Elevators.getDispatcher().sendToServer(new ElevatorTeleportMessage(false));
-                event.setResult(Event.Result.DENY);
-            } else if (keyBindJump.getKey().getValue() == event.getKey()) {
-                    Elevators.getDispatcher().sendToServer(new ElevatorTeleportMessage(true));
-                event.setResult(Event.Result.DENY);
-                instance.player.setOnGround(false);
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public void register(RegisterCommandsEvent event) {
-        CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
-        dispatcher.register(
-            Commands.literal("elevators")
-                .then(Commands.literal("allowElevatingThroughBlocks")
-                    .then(Commands.argument("value", BoolArgumentType.bool())
-                        .executes(Config::setAllowElevatingThroughBlocks)))
-                .then(Commands.literal("defaultMaxTeleportHeight")
-                    .then(Commands.argument("value", IntegerArgumentType.integer(1, 256))
-                        .executes(Config::setMaxTeleportHeight)))
-                .then(Commands.literal("elevatorBlockWithHeight")
-                    .then(Commands.literal("add")
-                        .then(Commands.argument("block", BlockStateArgument.block())
-                            .executes(Config::addElevatorBlock)
-                            .then(Commands.argument("height", IntegerArgumentType.integer())
-                                .executes(Config::addElevatorBlockWithHeight)))
-                    )
-                    .then(Commands.literal("remove")
-                        .then(Commands.argument("block", BlockStateArgument.block())
-                            .executes(Config::removeElevatorBlock)))
-                    .then(Commands.literal("list")
-                        .executes(context ->
-                            Config.listElevatorBlocks(context.getSource()))))
-        );
-    }
+/**
+ * The enum Message type.
+ */
+public enum MessageType {
+    /**
+     *Get message type.
+     */
+    GET,
+    /**
+     *Put message type.
+     */
+    PUT,
+    /**
+     *Delete message type.
+     */
+    DELETE,
 }
