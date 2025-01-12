@@ -3,9 +3,10 @@ package org.hhoao.mc.ironelevators;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.arguments.blocks.BlockInput;
+import net.minecraft.commands.arguments.blocks.BlockStateArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
@@ -15,16 +16,36 @@ import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.registries.ForgeRegistries;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 
 public class Config {
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    private static final ForgeConfigSpec.ConfigValue<Boolean> ALLOW_ELEVATING_THROUGH_BLOCKS = BUILDER.define("allowElevatingThroughBlocks", true);
-    private static final ForgeConfigSpec.ConfigValue<Integer> MAX_TELEPORT_HEIGHT = BUILDER.define("maxTeleportHeight", 8);
-    private static final ForgeConfigSpec.ConfigValue<String> ELEVATOR_BLOCK = BUILDER.define("elevatorBlock", ForgeRegistries.BLOCKS.getKey(Blocks.IRON_BLOCK).getPath());
+    private static final ForgeConfigSpec.ConfigValue<Boolean> ALLOW_ELEVATING_THROUGH_BLOCKS =
+        BUILDER.define("allowElevatingThroughBlocks", true);
+    private static final ForgeConfigSpec.ConfigValue<Integer> MAX_TELEPORT_HEIGHT =
+        BUILDER.define("defaultMaxTeleportHeight", 8);
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> ELEVATOR_BLOCKS_WITH_HEIGHT =
+        BUILDER.defineList("elevatorBlocksWithHeight", getDefaultElevatorsBlock(), (o) -> true);
     static final ForgeConfigSpec SPEC = BUILDER.build();
+    private static Map<Block, Integer> blockMaxHeightMap;
 
-    public static Block getElevatorBlock() {
-        return ForgeRegistries.BLOCKS.getValue(new ResourceLocation(ELEVATOR_BLOCK.get()));
+    public static Map<Block, Integer> getElevatorBlockMaxHeightMap() {
+        if (blockMaxHeightMap == null) {
+            blockMaxHeightMap = new HashMap<>();
+            for (String blockHeight : ELEVATOR_BLOCKS_WITH_HEIGHT.get()) {
+                String[] split = blockHeight.split(":");
+                if (split.length > 1) {
+                    blockMaxHeightMap.put(ForgeRegistries.BLOCKS.getValue(new ResourceLocation(split[0])), Integer.valueOf(split[1]));
+                } else {
+                    blockMaxHeightMap.put(ForgeRegistries.BLOCKS.getValue(new ResourceLocation(split[0])), -1);
+                }
+            }
+        }
+        return blockMaxHeightMap;
     }
 
     public static Boolean isAllowElevatingThroughBlocks() {
@@ -34,6 +55,13 @@ public class Config {
     public static Integer getMaxTeleportHeight() {
         return MAX_TELEPORT_HEIGHT.get();
     }
+
+    private static List<String> getDefaultElevatorsBlock() {
+        ArrayList<String> elevators = new ArrayList<>();
+        elevators.add(ForgeRegistries.BLOCKS.getKey(Blocks.IRON_BLOCK).getPath());
+        return elevators;
+    }
+
 
     public static int setAllowElevatingThroughBlocks(CommandContext<CommandSourceStack> context) {
         boolean value = BoolArgumentType.getBool(context, "value");
@@ -49,16 +77,60 @@ public class Config {
         return Command.SINGLE_SUCCESS;
     }
 
-    public static int setElevatorBlock(CommandContext<CommandSourceStack> context) {
-        String blockName = StringArgumentType.getString(context, "value");
-        if (ForgeRegistries.BLOCKS.containsKey(new ResourceLocation(blockName))) {
-            ELEVATOR_BLOCK.set(blockName);
-            context.getSource().sendSuccess(() -> Component.literal("Set elevatorBlock to " + blockName), true);
-            return Command.SINGLE_SUCCESS;
-        } else {
-            context.getSource().sendFailure(Component.literal("Block not found: " + blockName));
-            return 0;
-        }
+    public static int addElevatorBlock(CommandContext<CommandSourceStack> context, int height) {
+        BlockInput blockInput = BlockStateArgument.getBlock(context, "block");
+        Block block = blockInput.getState().getBlock();
+        Map<Block, Integer> elevatorBlockMaxHeightMap = getElevatorBlockMaxHeightMap();
+        elevatorBlockMaxHeightMap.put(block, height);
+        refreshConfig(elevatorBlockMaxHeightMap);
+        context.getSource().sendSuccess(() -> Component.literal(
+            String.format("Add elevatorBlock: %s, height: %s", block.getDescriptionId(), height == -1 ? getMaxTeleportHeight() : height)),
+            true);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    public static int addElevatorBlock(CommandContext<CommandSourceStack> context) {
+        return addElevatorBlock(context, -1);
+    }
+
+    public static int addElevatorBlockWithHeight(CommandContext<CommandSourceStack> context) {
+        int height = IntegerArgumentType.getInteger(context, "height");
+        return addElevatorBlock(context, height);
+    }
+
+    public static int removeElevatorBlock(CommandContext<CommandSourceStack> context) {
+        BlockInput blockInput = BlockStateArgument.getBlock(context, "block");
+        Block block= blockInput.getState().getBlock();
+
+        Map<Block, Integer> elevatorBlockMaxHeightMap = getElevatorBlockMaxHeightMap();
+        elevatorBlockMaxHeightMap.remove(block);
+        refreshConfig(elevatorBlockMaxHeightMap);
+        context.getSource().sendSuccess(() -> Component.literal("Remove elevatorBlock: " + block.getDescriptionId()), true);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static void refreshConfig(Map<Block, Integer> elevatorBlockMaxHeightMap) {
+        ELEVATOR_BLOCKS_WITH_HEIGHT.set(elevatorBlockMaxHeightMap
+            .entrySet()
+            .stream()
+            .map(blockHeight ->
+                ForgeRegistries.BLOCKS.getKey(blockHeight.getKey()).toString() +
+                    (blockHeight.getValue() == -1 ? "" : ":" + blockHeight.getValue())
+            )
+            .toList());
+    }
+
+    public static int listElevatorBlocks(CommandSourceStack source) {
+        Map<Block, Integer> elevatorBlockMaxHeightMap = getElevatorBlockMaxHeightMap();
+        source.sendSystemMessage(
+            Component.literal(String.format("Elevator Blocks: %s",
+                String.join(", ",
+                    elevatorBlockMaxHeightMap.entrySet().stream()
+                        .map(block ->
+                            ForgeRegistries.BLOCKS.getKey(block.getKey()).toString()+
+                                (block.getValue() == -1 ? "" : ":" + block.getValue()))
+                        .toArray(String[]::new)))));
+        return Command.SINGLE_SUCCESS;
     }
 
     public static void initialize(ModLoadingContext modLoadingContext) {

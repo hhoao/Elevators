@@ -157,9 +157,10 @@ package org.hhoao.mc.ironelevators;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.blocks.BlockStateArgument;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.RegisterCommandsEvent;
@@ -168,19 +169,6 @@ import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public class ForgeEventHandler {
-//    @SubscribeEvent
-//    public void onKeyInput(InputEvent.Key event) {
-//        Minecraft minecraft = Minecraft.getInstance();
-//        if (minecraft.player != null) {
-//            if (minecraft.options.keyShift.isDown()) {
-//                ServerPlayer player = (ServerPlayer) event.getEntity();
-//                ElevatorController elevatorController =
-//                    Ironelevators.getElevatorController();
-//                elevatorController.tryTeleportUp(player);
-//                System.out.println(minecraft.player.getName().getString() + " is crouching!");
-//            }
-//        }
-//    }
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide) { // 仅在服务端处理
@@ -188,7 +176,7 @@ public class ForgeEventHandler {
             if (player.isCrouching()) {
                 ElevatorController elevatorController =
                     Elevators.getElevatorController();
-                elevatorController.tryTeleportDown((ServerPlayer)player);
+                elevatorController.tryTeleport((ServerPlayer)player, false);
             }
         }
     }
@@ -199,24 +187,35 @@ public class ForgeEventHandler {
             ServerPlayer player = (ServerPlayer) event.getEntity();
             ElevatorController elevatorController =
                 Elevators.getElevatorController();
-            elevatorController.tryTeleportUp(player);
+            elevatorController.tryTeleport(player, true);
         }
     }
 
     @SubscribeEvent
     public void register(RegisterCommandsEvent event) {
+        CommandBuildContext buildContext = event.getBuildContext();
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
         dispatcher.register(
             Commands.literal("elevators")
                 .then(Commands.literal("allowElevatingThroughBlocks")
                     .then(Commands.argument("value", BoolArgumentType.bool())
                         .executes(Config::setAllowElevatingThroughBlocks)))
-                .then(Commands.literal("maxTeleportHeight")
+                .then(Commands.literal("defaultMaxTeleportHeight")
                     .then(Commands.argument("value", IntegerArgumentType.integer(1, 256))
                         .executes(Config::setMaxTeleportHeight)))
-                .then(Commands.literal("elevatorBlock")
-                    .then(Commands.argument("value", StringArgumentType.word())
-                        .executes(Config::setElevatorBlock)))
+                .then(Commands.literal("elevatorBlockWithHeight")
+                    .then(Commands.literal("add")
+                        .then(Commands.argument("block", BlockStateArgument.block(buildContext))
+                            .executes(Config::addElevatorBlock)
+                            .then(Commands.argument("height", IntegerArgumentType.integer())
+                                .executes(Config::addElevatorBlockWithHeight)))
+                    )
+                    .then(Commands.literal("remove")
+                        .then(Commands.argument("block", BlockStateArgument.block(buildContext))
+                            .executes(Config::removeElevatorBlock)))
+                    .then(Commands.literal("list")
+                        .executes(context ->
+                            Config.listElevatorBlocks(context.getSource()))))
         );
     }
 }
