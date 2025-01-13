@@ -1,7 +1,11 @@
+import java.nio.file.Files
+import java.nio.file.Paths
+
 plugins {
     id 'eclipse'
     id 'idea'
     id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
+    id("com.diffplug.spotless") version "6.10.0"
 }
 
 
@@ -184,4 +188,17 @@ tasks.named('jar', Jar).configure {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}
+
+
+spotless {
+    java {
+        googleJavaFormat().style("AOSP")
+        var licenseBuilder = new StringBuilder("/*\n")
+        for (final def line in Files.readAllLines(Paths.get(rootProject.projectDir.absolutePath, "LICENSE.txt")) ) {
+            licenseBuilder.append(" * ${line}\n")
+        }
+        licenseBuilder.append(" */\n\n")
+        licenseHeader(licenseBuilder.toString())
+    }
 }
