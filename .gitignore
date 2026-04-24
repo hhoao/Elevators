@@ -61,3 +61,6 @@ gradle-app.setting
 
 # User-specific stuff
 .idea/
+
+# Local git worktrees
+.worktrees/
