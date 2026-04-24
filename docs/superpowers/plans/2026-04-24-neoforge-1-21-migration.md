@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Migrate the root `Elevators` mod from Forge `1.20.1` to NeoForge `1.21.8` while preserving the existing `elevators` mod id and gameplay behavior.
+**Goal:** Migrate the root `Elevators` mod from Forge `1.20.1` to NeoForge `1.21` while preserving the existing `elevators` mod id and gameplay behavior.
 
-**Architecture:** Convert the root Gradle project to the NeoForge MDK-style layout, move metadata generation to `src/main/templates/META-INF/neoforge.mods.toml`, and keep the gameplay logic concentrated in the existing Java classes. Use test-first changes for Java behavior and command/config parsing, while treating the build-file conversion as the one configuration-file exception verified by failing and passing Gradle commands.
+**Architecture:** Normalize the existing `.worktrees/neoforge-1.21/` migration branch to the `examplemod-template-1.21` baseline, keep metadata generation in `src/main/templates/META-INF/neoforge.mods.toml`, and preserve the current gameplay classes. Use test-first changes for Java behavior and command/config parsing, while treating the build-file conversion as the one configuration-file exception verified by failing and passing Gradle commands.
 
-**Tech Stack:** Java 21, Gradle 8.8, NeoForge ModDevGradle `2.0.141`, NeoForge `21.8.53`, Minecraft `1.21.8`, JUnit 5.
+**Tech Stack:** Java 21, Gradle 8.8, NeoForge ModDevGradle `2.0.141`, NeoForge `21.0.167`, Minecraft `1.21`, JUnit 5.
 
 ---
 
@@ -51,7 +51,7 @@ plugins {
 rootProject.name = 'elevators'
 ```
 
-- [ ] **Step 3: Replace `gradle.properties` with NeoForge `1.21.8` values**
+- [ ] **Step 3: Replace `gradle.properties` with NeoForge `1.21` values**
 
 Write:
 
@@ -61,17 +61,16 @@ org.gradle.daemon=false
 org.gradle.parallel=true
 org.gradle.caching=true
 org.gradle.configuration-cache=true
-minecraft_version=1.21.8
-minecraft_version_range=[1.21.8,1.22)
-neo_version=21.8.53
-neo_version_range=[21,)
+minecraft_version=1.21
+minecraft_version_range=[1.21]
+neo_version=21.0.167
 loader_version_range=[1,)
-parchment_minecraft_version=1.21.8
-parchment_mappings_version=2025.09.14
+parchment_minecraft_version=1.21
+parchment_mappings_version=2024.11.10
 mod_id=elevators
 mod_name=Elevators
 mod_license=Mozilla Public License 2.0
-mod_version=1.21.8_1.0.0
+mod_version=1.21.0_1.0.0
 mod_group_id=org.hhoa.mc
 mod_authors=hhoa
 mod_description=Elevators
@@ -129,7 +128,7 @@ neoForge {
         }
 
         data {
-            clientData()
+            data()
             programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
         }
 
@@ -163,7 +162,6 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
         minecraft_version      : minecraft_version,
         minecraft_version_range: minecraft_version_range,
         neo_version            : neo_version,
-        neo_version_range      : neo_version_range,
         loader_version_range   : loader_version_range,
         mod_id                 : mod_id,
         mod_name               : mod_name,
@@ -225,7 +223,7 @@ description = '''${mod_description}'''
 [[dependencies."${mod_id}"]]
 modId = "neoforge"
 type = "required"
-versionRange = "${neo_version_range}"
+versionRange = "[${neo_version},)"
 ordering = "NONE"
 side = "BOTH"
 
@@ -264,10 +262,11 @@ git commit -m "build: convert project scaffold to neoforge 1.21"
 
 Expected: commit succeeds with the new NeoForge build and metadata scaffold.
 
-### Task 2: Add config parsing tests and migrate `Config.java`
+### Task 2: Add config parsing tests and normalize `Config.java`
 
 **Files:**
 - Create: `src/test/java/org/hhoao/mc/ironelevators/ConfigParsingTest.java`
+- Modify: `src/main/java/org/hhoao/mc/ironelevators/ElevatorBlockEntries.java:1-34`
 - Modify: `src/main/java/org/hhoao/mc/ironelevators/Config.java:1-139`
 
 - [ ] **Step 1: Write the failing config parsing tests**
@@ -277,7 +276,6 @@ Create `src/test/java/org/hhoao/mc/ironelevators/ConfigParsingTest.java`:
 ```java
 package org.hhoao.mc.ironelevators;
 
-import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
@@ -289,29 +287,29 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ConfigParsingTest {
     @Test
     void parseElevatorBlockEntriesSkipsMalformedValues() {
-        Map<ResourceLocation, Integer> parsed = Config.parseElevatorBlockEntries(List.of(
+        Map<String, Integer> parsed = ElevatorBlockEntries.parse(List.of(
             "minecraft:iron_block",
             "minecraft:gold_block:12",
             "broken-entry",
             "minecraft:emerald_block:not_a_number"
         ));
 
-        Map<ResourceLocation, Integer> expected = new LinkedHashMap<>();
-        expected.put(ResourceLocation.parse("minecraft:iron_block"), -1);
-        expected.put(ResourceLocation.parse("minecraft:gold_block"), 12);
+        Map<String, Integer> expected = new LinkedHashMap<>();
+        expected.put("minecraft:iron_block", -1);
+        expected.put("minecraft:gold_block", 12);
 
         assertEquals(expected, parsed);
     }
 
     @Test
     void serializeElevatorBlockEntriesUsesFullResourceLocations() {
-        Map<ResourceLocation, Integer> entries = new LinkedHashMap<>();
-        entries.put(ResourceLocation.parse("minecraft:iron_block"), -1);
-        entries.put(ResourceLocation.parse("minecraft:gold_block"), 12);
+        Map<String, Integer> entries = new LinkedHashMap<>();
+        entries.put("minecraft:iron_block", -1);
+        entries.put("minecraft:gold_block", 12);
 
         assertEquals(
             List.of("minecraft:iron_block", "minecraft:gold_block:12"),
-            Config.serializeElevatorBlockEntries(entries)
+            ElevatorBlockEntries.serialize(entries)
         );
     }
 }
@@ -325,9 +323,9 @@ Run:
 bash ./gradlew test --tests org.hhoao.mc.ironelevators.ConfigParsingTest
 ```
 
-Expected: FAIL because `Config` still uses Forge imports and does not expose `parseElevatorBlockEntries` or `serializeElevatorBlockEntries`.
+Expected: FAIL because the root Forge branch does not contain `ElevatorBlockEntries` yet and still compiles against Forge-only APIs.
 
-- [ ] **Step 3: Replace `Config.java` with NeoForge config code and pure parsing helpers**
+- [ ] **Step 3: Add `ElevatorBlockEntries.java` and replace `Config.java` with NeoForge config code**
 
 Write:
 
@@ -518,7 +516,7 @@ Expected: PASS with both tests green.
 Run:
 
 ```bash
-git add src/main/java/org/hhoao/mc/ironelevators/Config.java src/test/java/org/hhoao/mc/ironelevators/ConfigParsingTest.java
+git add src/main/java/org/hhoao/mc/ironelevators/ElevatorBlockEntries.java src/main/java/org/hhoao/mc/ironelevators/Config.java src/test/java/org/hhoao/mc/ironelevators/ConfigParsingTest.java
 git commit -m "test: cover and migrate config parsing"
 ```
 
@@ -835,18 +833,18 @@ rg -n "Forge|1\\.20\\.1|elevator|maxTeleportHeight <value>|elevatorBlock <value>
 
 Expected: matches show the README still describes the old Forge build and outdated command names.
 
-- [ ] **Step 2: Update `README.md` for NeoForge `1.21.8`**
+- [ ] **Step 2: Update `README.md` for NeoForge `1.21`**
 
 Write:
 
 ````markdown
 # Elevators
-Elevators 是我的世界 NeoForge 1.21.8 模组，用于通过电梯方块（默认为铁块）上下（跳跃和蹲下）传送。
+Elevators 是我的世界 NeoForge 1.21 模组，用于通过电梯方块（默认为铁块）上下（跳跃和蹲下）传送。
 
 ## 开发环境
 - Java 21
-- NeoForge 21.8.53
-- Minecraft 1.21.8
+- NeoForge 21.0.167
+- Minecraft 1.21
 
 ## 构建与运行
 ```bash
@@ -874,7 +872,7 @@ Run:
 bash ./gradlew build
 ```
 
-Expected: PASS and produce `build/libs/elevators-1.21.8_1.0.0.jar`.
+Expected: PASS and produce `build/libs/elevators-1.21.0_1.0.0.jar`.
 
 - [ ] **Step 4: Run a dedicated-server smoke test**
 

@@ -1,10 +1,10 @@
 # Elevators
-Elevators 是我的世界 NeoForge 1.21.8 模组，用于通过电梯方块（默认为铁块）上下（跳跃和蹲下）传送。
+Elevators 是我的世界 NeoForge 1.21 模组，用于通过电梯方块（默认为铁块）上下（跳跃和蹲下）传送。
 
 ## 开发环境
 - Java 21
-- NeoForge 21.8.53
-- Minecraft 1.21.8
+- NeoForge 21.0.167
+- Minecraft 1.21
 
 ## 构建与运行
 ```bash
