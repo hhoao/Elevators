@@ -163,38 +163,39 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.blocks.BlockStateArgument;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
-public class ForgeEventHandler {
+public final class ForgeEventHandler {
+    private ForgeEventHandler() {
+    }
+
     @SubscribeEvent
-    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide) { // 仅在服务端处理
-            Player player = event.player;
-            if (player.isCrouching()) {
-                ElevatorController elevatorController =
-                    Elevators.getElevatorController();
-                elevatorController.tryTeleport((ServerPlayer)player, false);
-            }
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide() || !(player instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
+
+        if (player.isCrouching()) {
+            Elevators.getElevatorController().tryTeleport(serverPlayer, false);
         }
     }
 
     @SubscribeEvent
-    public void onLivingJump(LivingEvent.LivingJumpEvent event) {
-        if (event.getEntity() instanceof ServerPlayer) {
-            ServerPlayer player = (ServerPlayer) event.getEntity();
-            ElevatorController elevatorController =
-                Elevators.getElevatorController();
-            elevatorController.tryTeleport(player, true);
+    public static void onLivingJump(LivingEvent.LivingJumpEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            Elevators.getElevatorController().tryTeleport(player, true);
         }
     }
 
     @SubscribeEvent
-    public void register(RegisterCommandsEvent event) {
+    public static void register(RegisterCommandsEvent event) {
         CommandBuildContext buildContext = event.getBuildContext();
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
+
         dispatcher.register(
             Commands.literal("elevators")
                 .then(Commands.literal("allowElevatingThroughBlocks")
@@ -208,14 +209,12 @@ public class ForgeEventHandler {
                         .then(Commands.argument("block", BlockStateArgument.block(buildContext))
                             .executes(Config::addElevatorBlock)
                             .then(Commands.argument("height", IntegerArgumentType.integer())
-                                .executes(Config::addElevatorBlockWithHeight)))
-                    )
+                                .executes(Config::addElevatorBlockWithHeight))))
                     .then(Commands.literal("remove")
                         .then(Commands.argument("block", BlockStateArgument.block(buildContext))
                             .executes(Config::removeElevatorBlock)))
                     .then(Commands.literal("list")
-                        .executes(context ->
-                            Config.listElevatorBlocks(context.getSource()))))
+                        .executes(context -> Config.listElevatorBlocks(context.getSource()))))
         );
     }
 }

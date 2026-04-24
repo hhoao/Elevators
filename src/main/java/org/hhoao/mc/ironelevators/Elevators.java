@@ -1,29 +1,25 @@
 package org.hhoao.mc.ironelevators;
 
 import com.mojang.logging.LogUtils;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
 @Mod(Elevators.MODID)
 public class Elevators {
     public static final String MODID = "elevators";
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static ElevatorController elevatorController;
+    private static final ElevatorController ELEVATOR_CONTROLLER = new ElevatorController();
 
     public static ElevatorController getElevatorController() {
-        return elevatorController;
+        return ELEVATOR_CONTROLLER;
     }
 
-    public Elevators() {
+    public Elevators(IEventBus modBus, ModContainer container) {
         LOGGER.info("Elevators enable");
-        ModLoadingContext modLoadingContext = ModLoadingContext.get();
-        IEventBus forgeEventBus = MinecraftForge.EVENT_BUS;
-
-        Config.initialize(modLoadingContext);
-        forgeEventBus.register(new ForgeEventHandler());
-        elevatorController = new ElevatorController();
+        Config.initialize(container);
+        NeoForge.EVENT_BUS.register(ForgeEventHandler.class);
     }
 }

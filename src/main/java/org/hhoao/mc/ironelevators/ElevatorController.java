@@ -47,10 +47,11 @@ public class ElevatorController {
 	}
 
 	private Optional<BlockPos> nextUpElevator(Level world, BlockPos pos, int maxTeleportHeight) {
+		int maxYExclusive = world.dimensionType().minY() + world.dimensionType().height();
 		BlockPos upPos = pos;
 		for (int i = 0; i < maxTeleportHeight; i++) {
 			upPos = upPos.above();
-			if (upPos.getY() > world.getMaxBuildHeight()) {
+			if (upPos.getY() >= maxYExclusive) {
 				return Optional.empty();
 			}
 			if (isElevator(world, upPos) && isSpaceFree(world, upPos)) {
@@ -63,10 +64,11 @@ public class ElevatorController {
 	}
 
 	private Optional<BlockPos> nextDownElevator(Level world, BlockPos pos, int maxTeleportHeight) {
+		int minY = world.dimensionType().minY();
 		BlockPos downPos = pos;
 		for (int i = 0; i < maxTeleportHeight; i++) {
 			downPos = downPos.below();
-			if (downPos.getY() < world.getMinBuildHeight()) {
+			if (downPos.getY() < minY) {
 				return Optional.empty();
 			}
 			if (isElevator(world, downPos) && isSpaceFree(world, downPos)) {
