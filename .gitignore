@@ -65,3 +65,5 @@ gradle-app.setting
 
 # Local git worktrees
 .worktrees/
+docs/superpowers
+.eclipse
